@@ -123,5 +123,56 @@ export const initialLessons: Lesson[] = [
       'pt-BR': "**Homoiconicidade** significa que o código é escrito na mesma estrutura de dados que a linguagem pode manipular (Listas).\n\nUse `'` (quote) para parar a avaliação. `(+ 1 2)` roda o código. `'(+ 1 2)` te dá a lista de dados."
     },
     initialCode: "(def my-code '(+ 1 2))\n\n(car my-code) ;; returns the symbol +\n(cdr my-code) ;; returns (1 2)\n\n(list 'a 'b 'c)"
+  },
+  {
+    id: '5',
+    order: 5,
+    title: {
+      en: "5. Metaprogramming with Macros",
+      'pt-BR': "5. Metaprogramação com Macros"
+    },
+    description: {
+      en: "Introduction to macros: functions that write code.",
+      'pt-BR': "Introdução a macros: funções que escrevem código."
+    },
+    content: {
+      en: "Normal functions evaluate their arguments. **Macros** receive the unevaluated arguments (the code itself), transform them, and return new code to be executed.\n\nThis allows you to change the syntax of the language. In the example below, we create an `infix` macro that allows us to write `(infix 1 + 2)` instead of `(+ 1 2)`.",
+      'pt-BR': "Funções normais avaliam seus argumentos. **Macros** recebem os argumentos não avaliados (o próprio código), os transformam e retornam novo código para ser executado.\n\nIsso permite que você altere a sintaxe da linguagem. No exemplo abaixo, criamos uma macro `infix` que nos permite escrever `(infix 1 + 2)` em vez de `(+ 1 2)`."
+    },
+    initialCode: ";; A macro that takes arguments and rearranges them\n(defmacro infix (a op b)\n  (list op a b))\n\n;; Now we can use infix notation!\n(infix 10 + 20)\n\n(infix 5 * 5)"
+  },
+  {
+    id: '6',
+    order: 6,
+    title: {
+      en: "6. Syntactic Abstraction",
+      'pt-BR': "6. Abstração Sintática"
+    },
+    description: {
+      en: "Creating new control structures like 'when'.",
+      'pt-BR': "Criando novas estruturas de controle como 'when'."
+    },
+    content: {
+      en: "In many languages, if you want a new control flow keyword (like `unless` or `until`), you have to wait for the compiler writers to add it. In Lisp, you write it yourself.\n\nHere we implement `when`, which is like an `if` without an else clause, useful for side effects.",
+      'pt-BR': "Em muitas linguagens, se você quer uma nova palavra-chave de controle de fluxo (como `unless` ou `until`), você tem que esperar que os criadores do compilador a adicionem. Em Lisp, você mesmo a escreve.\n\nAqui implementamos `when`, que é como um `if` sem cláusula else, útil para efeitos colaterais."
+    },
+    initialCode: ";; 'when' expands to an 'if' with 'nil' as the else branch\n(defmacro when (condition action)\n  (list 'if condition action 'nil))\n\n(when (eq 10 10)\n  (print \"Math still works!\"))\n\n(when (eq 1 2)\n  (print \"This will not print\"))"
+  },
+  {
+    id: '7',
+    order: 7,
+    title: {
+      en: "7. The Power of Abstraction: let1",
+      'pt-BR': "7. O Poder da Abstração: let1"
+    },
+    description: {
+      en: "Implementing local variables using macros.",
+      'pt-BR': "Implementando variáveis locais usando macros."
+    },
+    content: {
+      en: "We can even create variable binding structures. A `let` block is actually just syntactic sugar for a `lambda` function applied to values.\n\n`let1` creates a single local variable. The macro transforms:\n`(let1 x 10 body)`\ninto:\n`((lambda (x) body) 10)`",
+      'pt-BR': "Podemos até criar estruturas de vinculação de variáveis. Um bloco `let` é na verdade apenas açúcar sintático para uma função `lambda` aplicada a valores.\n\n`let1` cria uma única variável local. A macro transforma:\n`(let1 x 10 corpo)`\nem:\n`((lambda (x) corpo) 10)`"
+    },
+    initialCode: ";; Define let1 macro\n(defmacro let1 (var val body)\n  (list (list 'lambda (list var) body) val))\n\n;; Use it to define a local scope\n(let1 x 5\n  (* x x))\n\n;; x is not defined here\n;; (print x) would fail"
   }
 ];
