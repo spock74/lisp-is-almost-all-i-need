@@ -1,0 +1,5 @@
+{
+  "name": "Parens & Power: The Lisp Way",
+  "description": "An interactive, hands-on Common Lisp course for experienced programmers, focusing on homoiconicity and macros. Inspired by SICP.",
+  "requestFramePermissions": []
+}
