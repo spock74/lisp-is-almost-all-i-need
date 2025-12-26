@@ -3,7 +3,6 @@ import { dictionary, initialLessons } from './data';
 import { Language, Lesson } from './types';
 import { runLisp } from './lispInterpreter';
 import { 
-  Terminal, 
   BookOpen, 
   Settings, 
   HelpCircle, 
@@ -15,8 +14,11 @@ import {
   Plus,
   Trash2,
   Save,
-  X
+  X,
+  Square,
+  Terminal as TerminalIcon
 } from 'lucide-react';
+import { biwaService, EvalResult } from './src/biwa-service';
 
 // --- Components ---
 
@@ -49,7 +51,7 @@ const Header = ({
   <header className="bg-lisp-bg border-b border-slate-800 p-4 sticky top-0 z-50 flex justify-between items-center shadow-lg">
     <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
       <div className="bg-lisp-accent p-2 rounded-lg text-white">
-        <Terminal size={24} />
+        <TerminalIcon size={24} />
       </div>
       <div>
         <h1 className="text-xl font-bold font-fira tracking-tight text-white">{strings.title}</h1>
@@ -194,43 +196,58 @@ const CodeEditor = ({ value, onChange, placeholder, onKeyDown }: any) => {
   );
 };
 
-const Repl = ({ initialCode, strings }: { initialCode: string, strings: any }) => {
+import Terminal from './src/components/Terminal';
+
+const Repl = ({ initialCode, strings, lessonContent }: { initialCode: string, strings: any, lessonContent: React.ReactNode }) => {
   const [input, setInput] = useState(initialCode);
-  const [output, setOutput] = useState("");
+  const [output, setOutput] = useState<EvalResult[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
   
-  // History State
+  // History State for Editor (we can keep it or sync with terminal history)
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [tempInput, setTempInput] = useState("");
 
   useEffect(() => {
+    const onOutput = (out: EvalResult) => {
+      setOutput(prev => [...prev, out]);
+    };
+    biwaService.addListener(onOutput);
+    return () => biwaService.removeListener(onOutput);
+  }, []);
+
+  useEffect(() => {
     setInput(initialCode);
-    setOutput("");
     setHistoryIndex(-1);
     setTempInput("");
   }, [initialCode]);
 
-  const handleRun = () => {
-    const res = runLisp(input);
-    setOutput(res);
+  const executeCode = async (code: string) => {
+    if (!code.trim()) return;
+    setIsRunning(true);
     
-    const trimmed = input.trim();
-    if (trimmed) {
-      setHistory(prev => {
-        if (prev.length === 0 || prev[prev.length - 1] !== trimmed) {
-          return [...prev, trimmed];
-        }
-        return prev;
-      });
+    // Log the input to the terminal
+    setOutput(prev => [...prev, { type: 'input', content: code }]);
+
+    try {
+      // Editor specific: if it looks like multiple lines or not a single simple expression, wrap in begin
+      const needsBegin = code.trim().split('\n').length > 1 || (!code.trim().startsWith('(') && !Number.isFinite(Number(code.trim())));
+      
+      const wrappedCode = needsBegin ? `(begin ${code}\n)` : code;
+      const result = await biwaService.evaluate(wrappedCode);
+      setOutput(prev => [...prev, { type: 'result', content: result }]);
+    } catch (err: any) {
+      // Error is caught by service listener
+    } finally {
+      setIsRunning(false);
     }
-    setHistoryIndex(-1);
-    setTempInput("");
   };
+
+  const handleRun = () => executeCode(input);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'ArrowUp') {
         const target = e.target as HTMLTextAreaElement;
-        // Check if cursor is on the first line
         const upToCursor = input.substring(0, target.selectionStart);
         const isFirstLine = upToCursor.indexOf('\n') === -1;
 
@@ -249,7 +266,6 @@ const Repl = ({ initialCode, strings }: { initialCode: string, strings: any }) =
         }
     } else if (e.key === 'ArrowDown') {
         const target = e.target as HTMLTextAreaElement;
-        // Check if cursor is on the last line
         const fromCursor = input.substring(target.selectionEnd);
         const isLastLine = fromCursor.indexOf('\n') === -1;
 
@@ -260,7 +276,6 @@ const Repl = ({ initialCode, strings }: { initialCode: string, strings: any }) =
                  setHistoryIndex(newIdx);
                  setInput(history[newIdx]);
              } else {
-                 // Restore temp input
                  setHistoryIndex(-1);
                  setInput(tempInput);
              }
@@ -268,21 +283,43 @@ const Repl = ({ initialCode, strings }: { initialCode: string, strings: any }) =
     }
   };
 
+  const handleStop = () => {
+    setIsRunning(false);
+    setOutput(prev => [...prev, { type: 'error', content: "Stopped (Note: Main-thread execution cannot be easily interrupted once started)." }]);
+  };
+
   return (
-    <div className="flex flex-col h-full bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-xl">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center border-b border-slate-700">
-        <span className="text-sm font-mono text-slate-400 flex items-center gap-2">
-          <Code size={14} /> REPL
-        </span>
-        <button 
-          onClick={handleRun}
-          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-1 transition-colors"
-        >
-          <Play size={12} /> {strings.runCode.toUpperCase()}
-        </button>
+    <div className="flex flex-col lg:flex-row h-full gap-4">
+      {/* 1. Lesson Content (Left) */}
+      <div className="flex-1 min-h-0">
+        {lessonContent}
       </div>
-      <div className="flex-1 flex flex-col md:flex-row h-96 md:h-auto">
-        <div className="flex-1 flex border-b md:border-b-0 md:border-r border-slate-800 min-h-[200px]">
+
+      {/* 2. Editor Panel (Center) */}
+      <div className="w-full lg:w-[45%] flex flex-col bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-xl">
+        <div className="bg-slate-800 px-4 py-2 flex justify-between items-center border-b border-slate-700">
+          <span className="text-sm font-mono text-slate-400 flex items-center gap-2">
+            <Code size={14} /> EDITOR
+          </span>
+          <div className="flex gap-2">
+            {isRunning ? (
+              <button 
+                onClick={handleStop}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-1 transition-colors"
+              >
+                <Square size={12} fill="currentColor" /> STOP
+              </button>
+            ) : (
+              <button 
+                onClick={handleRun}
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-1 transition-colors"
+              >
+                <Play size={12} /> {strings.runCode.toUpperCase()}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 flex min-h-[300px]">
            <CodeEditor 
              value={input} 
              onChange={(e: any) => setInput(e.target.value)} 
@@ -290,12 +327,17 @@ const Repl = ({ initialCode, strings }: { initialCode: string, strings: any }) =
              placeholder={strings.replPlaceholder} 
            />
         </div>
-        <div className="flex-1 bg-[#0d1321] p-4 overflow-auto font-fira text-sm">
-          <div className="text-slate-500 mb-2 uppercase text-xs tracking-wider border-b border-slate-800 pb-1">{strings.output}</div>
-          <pre className={`whitespace-pre-wrap break-words ${output.startsWith('Error') ? 'text-lisp-error' : 'text-lisp-code'}`}>
-            {output || "nil"}
-          </pre>
+      </div>
+
+      {/* 3. Terminal Panel (Right) - The "REPL" */}
+      <div className="w-full lg:w-1/4 flex flex-col bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-xl">
+        <div className="bg-slate-800 px-4 py-2 flex justify-between items-center border-b border-slate-700">
+          <span className="text-sm font-mono text-slate-400 flex items-center gap-2">
+            <TerminalIcon size={14} /> {strings.output.toUpperCase()}
+          </span>
+          {isRunning && <div className="w-3 h-3 bg-lisp-accent rounded-full animate-pulse" />}
         </div>
+        <Terminal outputs={output} onExecute={executeCode} />
       </div>
     </div>
   );
@@ -314,82 +356,57 @@ const LessonView = ({
   strings: any, 
   currentLang: Language 
 }) => {
-  
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+  }, [lesson]);
+
   const renderContent = (content: string) => {
-    // Split by code blocks first
-    const parts = content.split(/(```[\s\S]*?```)/g);
-    
-    return parts.map((part, index) => {
-      if (part.startsWith('```')) {
-        // Render Code Block
-        const code = part.replace(/^```\s*/, '').replace(/```$/, '');
-        return (
-          <div key={index} className="bg-[#0d1321] rounded-lg border border-slate-800 p-4 my-4 overflow-x-auto shadow-inner">
-            <pre className="font-fira text-sm">
-              <HighlightedCode code={code} />
-            </pre>
-          </div>
-        );
-      }
+    return content.split('\n').map((line, i) => {
+      let processed = line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-lisp-accent">$1</strong>');
+      processed = processed.replace(/\*(.*?)\*/g, '<em class="text-slate-300">$1</em>');
+      processed = processed.replace(/`(.*?)`/g, '<code class="bg-slate-800 px-1.5 py-0.5 rounded text-lisp-code font-fira">$1</code>');
+
+      if (line.trim() === '') return <div key={i} className="h-4" />;
       
-      // Render Text with inline styles
-      const paragraphs = part.split('\n\n').filter(p => p.trim());
       return (
-        <div key={index}>
-          {paragraphs.map((paragraph, pIdx) => (
-            <p key={pIdx} className="mb-4 text-slate-300 font-light leading-relaxed">
-              {paragraph.split(/(`[^`]+`)/).map((seg, sIdx) => {
-                if (seg.startsWith('`') && seg.endsWith('`')) {
-                  // Inline code
-                  return <code key={sIdx} className="bg-slate-800 text-green-400 px-1 rounded font-fira text-sm border border-slate-700">{seg.slice(1, -1)}</code>;
-                }
-                
-                // Bold text
-                const boldParts = seg.split(/(\*\*[^*]+\*\*)/g);
-                return boldParts.map((bPart, bIdx) => {
-                  if (bPart.startsWith('**') && bPart.endsWith('**')) {
-                    return <strong key={bIdx} className="text-white font-bold">{bPart.slice(2, -2)}</strong>;
-                  }
-                  return <React.Fragment key={bIdx}>{bPart}</React.Fragment>;
-                });
-              })}
-            </p>
-          ))}
-        </div>
+        <p 
+          key={i} 
+          className="mb-4 text-slate-300 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: processed }}
+        />
       );
     });
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-100px)]">
-      <div className="flex flex-col h-full bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-xl">
-        <div className="bg-slate-800 px-4 py-2 flex justify-between items-center border-b border-slate-700 shrink-0">
-          <span className="text-sm font-mono text-slate-400 flex items-center gap-2 uppercase">
-            <BookOpen size={14} /> {strings.lessonTitle.split(' ')[0]} {lesson.order}
-          </span>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
-          <h2 className="text-3xl font-bold mb-6 text-white border-b border-slate-800 pb-4">{lesson.title[currentLang]}</h2>
-          
-          <div className="prose prose-invert prose-lg max-w-none">
-            {renderContent(lesson.content[currentLang])}
+    <div className="max-w-[1600px] mx-auto h-[calc(100vh-160px)]">
+      <Repl initialCode={lesson.initialCode} strings={strings} lessonContent={
+        <div className="h-full bg-lisp-panel p-6 rounded-lg border border-slate-700 overflow-auto lesson-content custom-scrollbar" ref={contentRef}>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white border-l-4 border-lisp-accent pl-4">
+              {lesson.title[currentLang]}
+            </h2>
           </div>
-
-          <div className="flex justify-between items-center mt-12 pt-6 border-t border-slate-800">
-            <Button variant="secondary" onClick={onPrev} disabled={lesson.order === 1} className={lesson.order === 1 ? 'opacity-50 cursor-not-allowed' : ''}>
-              {strings.prevLesson}
-            </Button>
-            <Button onClick={onNext}>
-              {strings.nextLesson}
-            </Button>
+          {renderContent(lesson.content[currentLang])}
+          <div className="mt-8 pt-6 border-t border-slate-800 flex justify-between">
+            <button 
+              onClick={onPrev}
+              disabled={lesson.order === 1}
+              className={`flex items-center gap-1 transition-colors text-sm ${lesson.order === 1 ? 'opacity-30 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}
+            >
+              <ChevronLeft size={16} /> {strings.prevLesson}
+            </button>
+            <button 
+              onClick={onNext}
+              className="flex items-center gap-1 text-lisp-accent hover:text-white transition-colors font-bold text-sm"
+            >
+              {strings.nextLesson} <ChevronRight size={16} />
+            </button>
           </div>
         </div>
-      </div>
-      
-      <div className="h-full min-h-[400px]">
-        <Repl initialCode={lesson.initialCode} strings={strings} />
-      </div>
+      } />
     </div>
   );
 };

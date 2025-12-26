@@ -1,61 +1,115 @@
-# Parens & Power: The Lisp Way
+# Parens & Power (P&P): The Lisp Way
 
-Parens & Power is an interactive, web-based educational platform designed to teach the fundamentals of Common Lisp, with a specific focus on functional programming concepts, homoiconicity, and metaprogramming via macros. Inspired by the classic "Structure and Interpretation of Computer Programs" (SICP), this application provides a hands-on environment where users can read lessons and immediately execute Lisp code in a custom-built, client-side interpreter.
+**P&Pr** is an interactive very simple scketch of aeducational app designed to geing start with the fundamentals of Scheme/Lisp. Inspired by the legendary **SICP** (*Structure and Interpretation of Computer Programs*), it provides a seamless, zero-latency environment to explore functional programming, homoiconicity, and metaprogramming.
 
-## Features
+## System Architecture
 
-### Interactive Learning Environment
-*   **Split-Pane Interface:** View educational content alongside a functional REPL (Read-Eval-Print Loop).
-*   **Syntax Highlighting:** Custom token-based syntax highlighting for Lisp code within the editor and lesson content.
-*   **Bilingual Support:** Full localization support for English and Portuguese (PT-BR).
+The application is built with a focus on **persistence** and **instantaneous feedback**. Unlike traditional web-based interpreters that use high-overhead Web Workers, we leverage a main-thread singleton architecture to ensure that your definitions (functions and macros) persist throughout your entire learning session.
 
-### Custom Lisp Interpreter
-The application includes a fully functional Lisp interpreter written in TypeScript, running entirely in the browser.
-*   **Tokenizer & Parser:** Converts string input into Abstract Syntax Trees (AST).
-*   **Environment Model:** Implements scope handling, closures, and variable lookup.
-*   **Macro System:** Features a dedicated macro expansion phase, allowing users to define new syntactic constructs using `defmacro`.
-*   **Core Primitives:** Includes standard arithmetic operations, list manipulation (`car`, `cdr`, `cons`, `list`), logic, and flow control.
+### System Topology
 
-### Course Management
-*   **Lesson Navigation:** Sequential progression through modules covering atoms, lists, functions, and macros.
-*   **Admin Panel:** A built-in interface to create, edit, and delete lessons locally, enabling easy curriculum development.
+```mermaid
+graph TD
+    subgraph "Browser User Interface (React)"
+        A[Lesson Content]
+        B[Code Editor]
+        C[Interactive Terminal]
+    end
 
-### REPL Features
-*   **Command History:** Navigate through previously executed commands using Up/Down arrow keys.
-*   **Multiline Editing:** Support for complex function definitions.
-*   **Error Reporting:** Clear feedback for syntax errors or runtime exceptions.
+    subgraph "Core Services"
+        D{{"biwaService (Singleton)"}}
+    end
 
-## Technical Stack
+    subgraph "Lisp Engine"
+        E["BiwaScheme Interpreter (Main Thread)"]
+        F[(Persistent Memory / Global Env)]
+    end
 
-*   **Frontend Framework:** React 19
-*   **Language:** TypeScript
-*   **Styling:** Tailwind CSS
-*   **Icons:** Lucide React
-*   **Build Tool:** Vite (Recommended)
+    B -->|executeCode| D
+    C -->|onExecute| D
+    D -->|evaluate| E
+    E <-->|Read/Write Definitions| F
+    E -->|Callback Result| D
+    D -->|Notify Listeners| C
+    D -->|Notify Listeners| B
+```
 
-## Project Structure
+### Execution Sequence
 
-*   **src/lispInterpreter.ts**: The core logic of the language. Contains the `tokenize`, `parse`, `macroExpand`, and `evalLisp` functions.
-*   **src/App.tsx**: The main React component tree, layout, and view state management.
-*   **src/data.ts**: Contains the initial curriculum data and localization strings.
-*   **src/types.ts**: TypeScript definitions for the Lisp AST (`LispVal`), Environment, and Application interfaces.
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant T as Terminal / Editor
+    participant S as biwaService
+    participant B as BiwaScheme Engine
 
-## Lisp Dialect Details
+    U->>T: Type (+ 1 3) & Enter
+    T->>S: evaluate("(+ 1 3)")
+    S->>S: Check Parenthesis Balance
+    S->>B: interpreter.evaluate("(+ 1 3)")
+    B->>B: Execute in Persistent Env
+    B-->>S: Result: "4"
+    S->>T: Notify Output (type: 'result', content: '4')
+    T->>T: Update UI (Highlight & Group)
+    T-->>U: Display => 4
+```
 
-The interpreter implements a simplified Lisp dialect suitable for educational purposes.
+## 🌟 Key Features
 
-*   **Variables:** Defined using `(def variable value)`.
-*   **Functions:** Defined using `(def name (lambda (args) body))`.
-*   **Macros:** Defined using `(defmacro name (args) body)`.
-*   **Homoiconicity:** Code is treated as data using the quote operator `'`.
+### 1. Instant Persistent REPL
+*   **Zero Latency**: By running the interpreter on the main thread, we eliminate the "cold start" and serialization overhead of Web Workers.
+*   **State Persistence**: Definitions in one lesson are available in the next. Define an `infix` macro once, use it everywhere.
+*   **Interactive Design**: A fixed top-prompt REPL inspired by the official BiwaScheme.org environment.
 
-## Usage
+### 2. Advanced UX & Highlighting
+*   **Real-time Syntax Highlighting**: Powered by **Prism.js**, providing immediate visual feedback for Lisp/Scheme syntax.
+*   **Smart Multi-line Input**: 
+    *   `Enter`: Intelligently chooses between *execution* (if parentheses are balanced) or *auto-newline* (if code is incomplete).
+    *   `Shift + Enter`: Manual newline for block formatting.
+    *   `Auto-expanding Input`: The prompt area grows naturally as you paste or type large blocks of code.
 
-1.  Clone the repository.
-2.  Install dependencies using `npm install`.
-3.  Start the development server using `npm run dev`.
-4.  Open the application in your browser.
+### 3. Pedagogical History
+*   **Interaction Grouping**: Every execution is grouped as a single block (Command → Output), reversed globally so the latest result is always visible at the top, but the internal sequence remains logical.
 
-## License
+## 🛠 Technical Stack
 
-This project is open source and available for educational use.
+| Component | Technology |
+| :--- | :--- |
+| **Framework** | React 19 (Main Thread Control) |
+| **Interpreter** | [BiwaScheme](https://www.biwascheme.org/) (R6RS/R7RS hybrid) |
+| **Styles** | Vanilla CSS + Tailwind (Rich Dark Theme) |
+| **Highlighting** | PrismJS (Lisp Grammar) |
+| **Icons** | Lucide React |
+
+## 🚀 Getting Started
+
+1.  **Clone & Install**:
+    ```bash
+    git clone ...
+    pnpm install
+    ```
+
+2.  **Run Development**:
+    ```bash
+    pnpm dev
+    ```
+
+3.  **Explore**:
+    Navigate through lessons, edit code in the center panel, or experiment directly in the right-hand **Persistent REPL**.
+
+## 📖 Pedagogical Example: Macros
+
+One of the project's highlights is showing how Lisp can *change its own syntax*. Try this in the REPL:
+
+```scheme
+;; Define a syntax transformer
+(define-macro (infix a op b)
+  (list op a b))
+
+;; Use it instantly
+(infix 10 + 20)
+;; => 30
+```
+
+---
+*Created for hackers, thinkers, and anyone who believes that Lisp is almost all they need.*

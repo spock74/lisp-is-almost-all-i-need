@@ -36,19 +36,34 @@
       .font-fira {
         font-family: 'Fira Code', monospace;
       }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #0d1321;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 3px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+      }
+      /* Prism tomorrow theme subset for Lisp */
+      .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #999; }
+      .token.punctuation { color: #ccc; }
+      .token.namespace { opacity: .7; }
+      .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #f08d49; }
+      .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #7ec699; }
+      .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #a67f59; background: hsla(0, 0%, 100%, .075); }
+      .token.atrule, .token.attr-value, .token.keyword { color: #cc99cd; }
+      .token.function, .token.class-name { color: #f08d49; }
+      .token.regex, .token.important, .token.variable { color: #e90; }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
-  }
-}
-</script>
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
