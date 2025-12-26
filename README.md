@@ -1,12 +1,14 @@
 # Parens & Power (P&P): The Lisp Way
 
-**P&Pr** is an interactive very simple scketch of aeducational app designed to geing start with the fundamentals of Scheme/Lisp. Inspired by the legendary **SICP** (*Structure and Interpretation of Computer Programs*), it provides a seamless, zero-latency environment to explore functional programming, homoiconicity, and metaprogramming.
+**P&P** is an minimalist interactive of aeducational app designed to geing start with the fundamentals of Scheme/Lisp. Inspired by the [legendary **SICP** (*Structure and Interpretation of Computer Programs*)](https://sarabander.github.io/sicp/), it provides a seamless, zero-latency environment to explore functional programming, homoiconicity, and metaprogramming.
 
-## System Architecture
+> There are not real lessons yet, just sketchs.
 
-The application is built with a focus on **persistence** and **instantaneous feedback**. Unlike traditional web-based interpreters that use high-overhead Web Workers, we leverage a main-thread singleton architecture to ensure that your definitions (functions and macros) persist throughout your entire learning session.
+## Architecture
 
-### System Topology
+The application is built with a focus on **persistence** and **instantaneous feedback**. It leverages a main-thread singleton architecture to ensure that definitions (functions and macros) persist throughout entire session.
+
+### Topology adn Execution Sequence
 
 ```mermaid
 graph TD
@@ -34,7 +36,6 @@ graph TD
     D -->|Notify Listeners| B
 ```
 
-### Execution Sequence
 
 ```mermaid
 sequenceDiagram
@@ -54,7 +55,7 @@ sequenceDiagram
     T-->>U: Display => 4
 ```
 
-## 🌟 Key Features
+## Key Features
 
 ### 1. Instant Persistent REPL
 *   **Zero Latency**: By running the interpreter on the main thread, we eliminate the "cold start" and serialization overhead of Web Workers.
@@ -68,10 +69,10 @@ sequenceDiagram
     *   `Shift + Enter`: Manual newline for block formatting.
     *   `Auto-expanding Input`: The prompt area grows naturally as you paste or type large blocks of code.
 
-### 3. Pedagogical History
+### 3. History
 *   **Interaction Grouping**: Every execution is grouped as a single block (Command → Output), reversed globally so the latest result is always visible at the top, but the internal sequence remains logical.
 
-## 🛠 Technical Stack
+## Technical Stack
 
 | Component | Technology |
 | :--- | :--- |
@@ -81,7 +82,7 @@ sequenceDiagram
 | **Highlighting** | PrismJS (Lisp Grammar) |
 | **Icons** | Lucide React |
 
-## 🚀 Getting Started
+## Getting Started
 
 1.  **Clone & Install**:
     ```bash
@@ -97,7 +98,7 @@ sequenceDiagram
 3.  **Explore**:
     Navigate through lessons, edit code in the center panel, or experiment directly in the right-hand **Persistent REPL**.
 
-## 📖 Pedagogical Example: Macros
+## Pedagogical Example: Macros
 
 One of the project's highlights is showing how Lisp can *change its own syntax*. Try this in the REPL:
 
@@ -112,4 +113,4 @@ One of the project's highlights is showing how Lisp can *change its own syntax*.
 ```
 
 ---
-*Created for hackers, thinkers, and anyone who believes that Lisp is almost all they need.*
+*Created by Zehn*
